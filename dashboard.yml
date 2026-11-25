@@ -1,0 +1,36 @@
+name: Portfolio dashboard email
+
+on:
+  schedule:
+    # Once a day after the US close (16:00 New York time), Monday to Friday.
+    # Two crons cover US daylight time (20:05 UTC) and standard time (21:05 UTC).
+    # The script only sends in the one that lands at 16:05 New York time.
+    - cron: "5 20,21 * * 1-5"
+  workflow_dispatch:   # "Run workflow" button; always sends
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Build dashboard and send email
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python dashboard_mailer.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-preview
+          path: dashboard.html
+          if-no-files-found: ignore
